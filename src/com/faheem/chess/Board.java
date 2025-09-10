@@ -119,4 +119,36 @@ public class Board {
     public void clear() {
         for (int r = 0; r < 8; r++) for (int c = 0; c < 8; c++) grid[r][c] = null;
     }
+
+    public boolean isInCheck(boolean white) {
+        // find king position
+        Position kingPos = null;
+        for (int r = 0; r < 8; r++) {
+            for (int c = 0; c < 8; c++) {
+                Piece p = grid[r][c];
+                if (p != null && p instanceof com.faheem.chess.pieces.King && p.isWhite() == white) {
+                    kingPos = new Position(r, c);
+                    break;
+                }
+            }
+        }
+        if (kingPos == null) throw new IllegalStateException("No king found for " + (white ? "White" : "Black"));
+
+        // check opponent moves
+        for (int r = 0; r < 8; r++) {
+            for (int c = 0; c < 8; c++) {
+                Piece p = grid[r][c];
+                if (p != null && p.isWhite() != white) {
+                    for (Position move : p.legalMoves(this)) {
+                        if (move.equals(kingPos)) {
+                            return true; // king under attack
+                        }
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
 }
