@@ -5,9 +5,11 @@ import com.faheem.chess.pieces.*;
 /* Board: holds pieces, basic move/print/setup logic */
 public class Board {
     private final Piece[][] grid; // 8x8 board
+    private boolean whiteToMove;  // true if white's turn
 
     public Board() {
         grid = new Piece[8][8];
+        whiteToMove = true; // white starts
     }
 
     public Piece getPieceAt(Position pos) {
@@ -27,6 +29,11 @@ public class Board {
         Piece moving = getPieceAt(from);
         if (moving == null) throw new IllegalStateException("No piece at: " + from);
 
+        // check turn
+        if (moving.isWhite() != whiteToMove) {
+            throw new IllegalStateException("It's " + (whiteToMove ? "White" : "Black") + "'s turn");
+        }
+
         // check legality
         boolean legal = false;
         for (Position p : moving.legalMoves(this)) {
@@ -43,8 +50,14 @@ public class Board {
         setPieceAt(to, moving);   // capture if present
         setPieceAt(from, null);   // clear source
         moving.setPosition(to);   // update piece state
+
+        // switch turn
+        whiteToMove = !whiteToMove;
     }
 
+    public boolean isWhiteToMove() {
+        return whiteToMove;
+    }
 
     public void printBoard() {
         // print file labels at top
@@ -66,7 +79,6 @@ public class Board {
         for (char f = 'a'; f <= 'h'; f++) System.out.print(f + " ");
         System.out.println();
     }
-
 
     public void setupInitial() {
         clear(); // empty board first
