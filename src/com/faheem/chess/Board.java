@@ -34,7 +34,7 @@ public class Board {
             throw new IllegalStateException("It's " + (whiteToMove ? "White" : "Black") + "'s turn");
         }
 
-        // check legality
+        // check basic legality
         boolean legal = false;
         for (Position p : moving.legalMoves(this)) {
             if (p.equals(to)) {
@@ -46,14 +46,27 @@ public class Board {
             throw new IllegalArgumentException("Illegal move for " + moving + ": " + from + " -> " + to);
         }
 
-        // execute move
-        setPieceAt(to, moving);   // capture if present
-        setPieceAt(from, null);   // clear source
-        moving.setPosition(to);   // update piece state
+        // simulate move on copy
+        Board copy = this.shallowCopy();
+        Piece movingCopy = copy.getPieceAt(from);
+        copy.setPieceAt(to, movingCopy);
+        copy.setPieceAt(from, null);
+        movingCopy.setPosition(to);
+
+        if (copy.isInCheck(moving.isWhite())) {
+            throw new IllegalArgumentException("Illegal move: would leave "
+                    + (moving.isWhite() ? "White" : "Black") + " in check");
+        }
+
+        // execute real move
+        setPieceAt(to, moving);
+        setPieceAt(from, null);
+        moving.setPosition(to);
 
         // switch turn
         whiteToMove = !whiteToMove;
     }
+
 
     public boolean isWhiteToMove() {
         return whiteToMove;
