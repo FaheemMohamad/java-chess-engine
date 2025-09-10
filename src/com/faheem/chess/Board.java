@@ -63,6 +63,15 @@ public class Board {
         setPieceAt(from, null);
         moving.setPosition(to);
 
+
+        if (moving instanceof Pawn) {
+            if ((moving.isWhite() && to.row == 0) || (!moving.isWhite() && to.row == 7)) {
+                Piece promoted = new Queen(moving.isWhite(), to);
+                setPieceAt(to, promoted);
+                System.out.println("Pawn promoted to Queen at " + to);
+            }
+        }
+
         // switch turn
         whiteToMove = !whiteToMove;
     }
@@ -138,7 +147,7 @@ public class Board {
         for (int r = 0; r < 8; r++) {
             for (int c = 0; c < 8; c++) {
                 Piece p = grid[r][c];
-                if (p != null && p instanceof King && p.isWhite() == white) {
+                if (p != null && p instanceof com.faheem.chess.pieces.King && p.isWhite() == white) {
                     kingPos = new Position(r, c);
                     break;
                 }
@@ -146,7 +155,21 @@ public class Board {
         }
         if (kingPos == null) throw new IllegalStateException("No king found for " + (white ? "White" : "Black"));
 
-        return isSquareAttacked(kingPos, !white);
+        // check opponent moves
+        for (int r = 0; r < 8; r++) {
+            for (int c = 0; c < 8; c++) {
+                Piece p = grid[r][c];
+                if (p != null && p.isWhite() != white) {
+                    for (Position move : p.legalMoves(this)) {
+                        if (move.equals(kingPos)) {
+                            return true; // king under attack
+                        }
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 
     public boolean hasAnyLegalMoves(boolean white) {
@@ -185,41 +208,20 @@ public class Board {
             for (int c = 0; c < 8; c++) {
                 Piece p = grid[r][c];
                 if (p != null && p.isWhite() == byWhite) {
-                    if (p instanceof King) {
-                        // kings attack 1 square
+                    if (p instanceof com.faheem.chess.pieces.King) {
+                        // Kings: check adjacent squares manually
                         int[][] dirs = {
                                 {1,0}, {-1,0}, {0,1}, {0,-1},
                                 {1,1}, {1,-1}, {-1,1}, {-1,-1}
                         };
                         for (int[] d : dirs) {
-                            Position adj = new Position(r+d[0], c+d[1]);
-                            if (adj.inBounds() && adj.equals(pos)) return true;
-                        }
-                    } else if (p instanceof Queen || p instanceof Rook || p instanceof Bishop) {
-                        // sliding pieces: ray tracing
-                        int[][] dirs;
-                        if (p instanceof Rook)
-                            dirs = new int[][]{{1,0},{-1,0},{0,1},{0,-1}};
-                        else if (p instanceof Bishop)
-                            dirs = new int[][]{{1,1},{1,-1},{-1,1},{-1,-1}};
-                        else
-                            dirs = new int[][]{
-                                    {1,0},{-1,0},{0,1},{0,-1},
-                                    {1,1},{1,-1},{-1,1},{-1,-1}
-                            };
-
-                        for (int[] d : dirs) {
-                            int rr = r + d[0], cc = c + d[1];
-                            while (rr >= 0 && rr < 8 && cc >= 0 && cc < 8) {
-                                Position scan = new Position(rr, cc);
-                                if (scan.equals(pos)) return true;
-                                if (grid[rr][cc] != null) break; // blocked
-                                rr += d[0];
-                                cc += d[1];
+                            Position adj = new Position(r + d[0], c + d[1]);
+                            if (adj.inBounds() && adj.equals(pos)) {
+                                return true;
                             }
                         }
                     } else {
-                        // knights, pawns, etc. use their normal moves
+                        // All other pieces use legalMoves()
                         for (Position m : p.legalMoves(this)) {
                             if (m.equals(pos)) return true;
                         }
