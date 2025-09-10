@@ -67,7 +67,6 @@ public class Board {
         whiteToMove = !whiteToMove;
     }
 
-
     public boolean isWhiteToMove() {
         return whiteToMove;
     }
@@ -139,7 +138,7 @@ public class Board {
         for (int r = 0; r < 8; r++) {
             for (int c = 0; c < 8; c++) {
                 Piece p = grid[r][c];
-                if (p != null && p instanceof com.faheem.chess.pieces.King && p.isWhite() == white) {
+                if (p != null && p instanceof King && p.isWhite() == white) {
                     kingPos = new Position(r, c);
                     break;
                 }
@@ -147,21 +146,87 @@ public class Board {
         }
         if (kingPos == null) throw new IllegalStateException("No king found for " + (white ? "White" : "Black"));
 
-        // check opponent moves
+        return isSquareAttacked(kingPos, !white);
+    }
+
+    public boolean hasAnyLegalMoves(boolean white) {
         for (int r = 0; r < 8; r++) {
             for (int c = 0; c < 8; c++) {
-                Piece p = grid[r][c];
-                if (p != null && p.isWhite() != white) {
-                    for (Position move : p.legalMoves(this)) {
-                        if (move.equals(kingPos)) {
-                            return true; // king under attack
+                Piece piece = grid[r][c];
+                if (piece != null && piece.isWhite() == white) {
+                    for (Position move : piece.legalMoves(this)) {
+                        // simulate on a copy
+                        Board copy = this.shallowCopy();
+                        Piece movingCopy = copy.getPieceAt(new Position(r, c));
+                        copy.setPieceAt(move, movingCopy);
+                        copy.setPieceAt(new Position(r, c), null);
+                        movingCopy.setPosition(move);
+
+                        if (!copy.isInCheck(white)) {
+                            return true; // found at least one valid move
                         }
                     }
                 }
             }
         }
-
         return false;
     }
 
+    public boolean isCheckmate(boolean white) {
+        return isInCheck(white) && !hasAnyLegalMoves(white);
+    }
+
+    public boolean isStalemate(boolean white) {
+        return !isInCheck(white) && !hasAnyLegalMoves(white);
+    }
+
+    public boolean isSquareAttacked(Position pos, boolean byWhite) {
+        for (int r = 0; r < 8; r++) {
+            for (int c = 0; c < 8; c++) {
+                Piece p = grid[r][c];
+                if (p != null && p.isWhite() == byWhite) {
+                    if (p instanceof King) {
+                        // kings attack 1 square
+                        int[][] dirs = {
+                                {1,0}, {-1,0}, {0,1}, {0,-1},
+                                {1,1}, {1,-1}, {-1,1}, {-1,-1}
+                        };
+                        for (int[] d : dirs) {
+                            Position adj = new Position(r+d[0], c+d[1]);
+                            if (adj.inBounds() && adj.equals(pos)) return true;
+                        }
+                    } else if (p instanceof Queen || p instanceof Rook || p instanceof Bishop) {
+                        // sliding pieces: ray tracing
+                        int[][] dirs;
+                        if (p instanceof Rook)
+                            dirs = new int[][]{{1,0},{-1,0},{0,1},{0,-1}};
+                        else if (p instanceof Bishop)
+                            dirs = new int[][]{{1,1},{1,-1},{-1,1},{-1,-1}};
+                        else
+                            dirs = new int[][]{
+                                    {1,0},{-1,0},{0,1},{0,-1},
+                                    {1,1},{1,-1},{-1,1},{-1,-1}
+                            };
+
+                        for (int[] d : dirs) {
+                            int rr = r + d[0], cc = c + d[1];
+                            while (rr >= 0 && rr < 8 && cc >= 0 && cc < 8) {
+                                Position scan = new Position(rr, cc);
+                                if (scan.equals(pos)) return true;
+                                if (grid[rr][cc] != null) break; // blocked
+                                rr += d[0];
+                                cc += d[1];
+                            }
+                        }
+                    } else {
+                        // knights, pawns, etc. use their normal moves
+                        for (Position m : p.legalMoves(this)) {
+                            if (m.equals(pos)) return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+    }
 }

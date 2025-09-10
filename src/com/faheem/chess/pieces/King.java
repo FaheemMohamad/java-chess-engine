@@ -17,10 +17,14 @@ public class King extends Piece {
                 {1,0}, {-1,0}, {0,1}, {0,-1},
                 {1,1}, {1,-1}, {-1,1}, {-1,-1}
         };
+
         for (int[] d : dirs) {
             Position p = new Position(position.row + d[0], position.col + d[1]);
             if (p.inBounds() && (isEmptyAt(board, p) || isEnemyAt(board, p))) {
-                moves.add(p);
+                // prevent king from walking into check
+                if (!board.isSquareAttacked(p, !this.isWhite)) {
+                    moves.add(p);
+                }
             }
         }
         return moves;
