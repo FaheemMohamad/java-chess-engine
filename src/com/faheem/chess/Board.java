@@ -23,12 +23,28 @@ public class Board {
     public void movePiece(Position from, Position to) {
         if (from == null || to == null || !from.inBounds() || !to.inBounds())
             throw new IllegalArgumentException("Invalid move: " + from + " -> " + to);
+
         Piece moving = getPieceAt(from);
         if (moving == null) throw new IllegalStateException("No piece at: " + from);
+
+        // check legality
+        boolean legal = false;
+        for (Position p : moving.legalMoves(this)) {
+            if (p.equals(to)) {
+                legal = true;
+                break;
+            }
+        }
+        if (!legal) {
+            throw new IllegalArgumentException("Illegal move for " + moving + ": " + from + " -> " + to);
+        }
+
+        // execute move
         setPieceAt(to, moving);   // capture if present
         setPieceAt(from, null);   // clear source
         moving.setPosition(to);   // update piece state
     }
+
 
     public void printBoard() {
         // print file labels at top
